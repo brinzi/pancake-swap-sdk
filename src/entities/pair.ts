@@ -23,7 +23,7 @@ import { Token } from './token'
 
 let PAIR_ADDRESS_CACHE: { [key: string]: string } = {}
 
-const composeKey = (token0: Token, token1: Token) => `${token0.chainId}-${token0.address}-${token1.address}`
+const composeKey = (token0: Token, token1: Token) => `${token0.chainId}-${token0.address}-${token1.address}-${FACTORY_ADDRESS_MAP[token1.chainId]}`
 
 export class Pair {
   public readonly liquidityToken: Token

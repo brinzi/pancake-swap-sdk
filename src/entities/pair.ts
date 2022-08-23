@@ -15,7 +15,8 @@ import {
   FIVE,
   FEES_NUMERATOR,
   FEES_DENOMINATOR,
-  ChainId
+  ChainId,
+  ROUTER_ADDRESS
 } from '../constants'
 import { sqrt, parseBigintIsh } from '../utils'
 import { InsufficientReservesError, InsufficientInputAmountError } from '../errors'
@@ -23,24 +24,27 @@ import { Token } from './token'
 
 let PAIR_ADDRESS_CACHE: { [key: string]: string } = {}
 
-const composeKey = (token0: Token, token1: Token) => `${token0.chainId}-${token0.address}-${token1.address}-${FACTORY_ADDRESS_MAP[token1.chainId]}`
+const composeKey = (token0: Token, token1: Token, factory: string) => `${token0.chainId}-${token0.address}-${token1.address}-${factory}`
 
 export class Pair {
   public readonly liquidityToken: Token
   private readonly tokenAmounts: [TokenAmount, TokenAmount]
 
-  public static getAddress(tokenA: Token, tokenB: Token): string {
+  public static getAddress(tokenA: Token, tokenB: Token, router: string): string {
     const [token0, token1] = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
 
-    const key = composeKey(token0, token1)
+    const factory = FACTORY_ADDRESS_MAP[token0.chainId][router];
+    const initCode = INIT_CODE_HASH_MAP[token0.chainId][router];
+
+    const key = composeKey(token0, token1, factory);
 
     if (PAIR_ADDRESS_CACHE?.[key] === undefined) {
       PAIR_ADDRESS_CACHE = {
         ...PAIR_ADDRESS_CACHE,
         [key]: getCreate2Address(
-          FACTORY_ADDRESS_MAP[token0.chainId],
-          keccak256(['bytes'], [pack(['address', 'address'], [token0.address, token1.address])]),
-          INIT_CODE_HASH_MAP[token0.chainId]
+        factory,
+        keccak256(['bytes'], [pack(['address', 'address'], [token0.address, token1.address])]),
+        initCode
         )
       }
     }
@@ -48,13 +52,13 @@ export class Pair {
     return PAIR_ADDRESS_CACHE[key]
   }
 
-  public constructor(tokenAmountA: TokenAmount, tokenAmountB: TokenAmount) {
+  public constructor(tokenAmountA: TokenAmount, tokenAmountB: TokenAmount, router = ROUTER_ADDRESS) {
     const tokenAmounts = tokenAmountA.token.sortsBefore(tokenAmountB.token) // does safety checks
       ? [tokenAmountA, tokenAmountB]
       : [tokenAmountB, tokenAmountA]
     this.liquidityToken = new Token(
       tokenAmounts[0].token.chainId,
-      Pair.getAddress(tokenAmounts[0].token, tokenAmounts[1].token),
+      Pair.getAddress(tokenAmounts[0].token, tokenAmounts[1].token, router),
       18,
       'Cake-LP',
       'Pancake LPs'

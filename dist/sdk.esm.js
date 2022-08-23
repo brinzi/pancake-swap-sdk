@@ -11,7 +11,7 @@ import { Contract } from '@ethersproject/contracts';
 import { getNetwork } from '@ethersproject/networks';
 import { getDefaultProvider } from '@ethersproject/providers';
 
-var _FACTORY_ADDRESS_MAP, _INIT_CODE_HASH_MAP, _SOLIDITY_TYPE_MAXIMA;
+var _ChainId$MAINNET, _ChainId$TESTNET, _FACTORY_ADDRESS_MAP, _ChainId$MAINNET2, _ChainId$TESTNET2, _INIT_CODE_HASH_MAP, _SOLIDITY_TYPE_MAXIMA;
 var ChainId;
 
 (function (ChainId) {
@@ -35,9 +35,10 @@ var Rounding;
 })(Rounding || (Rounding = {}));
 
 var FACTORY_ADDRESS = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73';
-var FACTORY_ADDRESS_MAP = (_FACTORY_ADDRESS_MAP = {}, _FACTORY_ADDRESS_MAP[ChainId.MAINNET] = FACTORY_ADDRESS, _FACTORY_ADDRESS_MAP[ChainId.TESTNET] = '0x6725f303b657a9451d8ba641348b6761a6cc7a17', _FACTORY_ADDRESS_MAP);
+var ROUTER_ADDRESS = '0x10ED43C718714eb63d5aA57B78B54704E256024E';
+var FACTORY_ADDRESS_MAP = (_FACTORY_ADDRESS_MAP = {}, _FACTORY_ADDRESS_MAP[ChainId.MAINNET] = (_ChainId$MAINNET = {}, _ChainId$MAINNET['0x10ED43C718714eb63d5aA57B78B54704E256024E'] = FACTORY_ADDRESS, _ChainId$MAINNET), _FACTORY_ADDRESS_MAP[ChainId.TESTNET] = (_ChainId$TESTNET = {}, _ChainId$TESTNET['0x10ED43C718714eb63d5aA57B78B54704E256024E'] = '0x6725f303b657a9451d8ba641348b6761a6cc7a17', _ChainId$TESTNET), _FACTORY_ADDRESS_MAP);
 var INIT_CODE_HASH = '0x00fb7f630766e6a796048ea87d01acd3068e8ff67d078148a3fa3f4a84f69bd5';
-var INIT_CODE_HASH_MAP = (_INIT_CODE_HASH_MAP = {}, _INIT_CODE_HASH_MAP[ChainId.MAINNET] = INIT_CODE_HASH, _INIT_CODE_HASH_MAP[ChainId.TESTNET] = '0xd0d4c4cd0848c93cb4fd1f498d7013ee6bfb25783ea21593d5834f5d250ece66', _INIT_CODE_HASH_MAP);
+var INIT_CODE_HASH_MAP = (_INIT_CODE_HASH_MAP = {}, _INIT_CODE_HASH_MAP[ChainId.MAINNET] = (_ChainId$MAINNET2 = {}, _ChainId$MAINNET2['0x10ED43C718714eb63d5aA57B78B54704E256024E'] = INIT_CODE_HASH, _ChainId$MAINNET2), _INIT_CODE_HASH_MAP[ChainId.TESTNET] = (_ChainId$TESTNET2 = {}, _ChainId$TESTNET2['0x10ED43C718714eb63d5aA57B78B54704E256024E'] = '0xd0d4c4cd0848c93cb4fd1f498d7013ee6bfb25783ea21593d5834f5d250ece66', _ChainId$TESTNET2), _INIT_CODE_HASH_MAP);
 var MINIMUM_LIQUIDITY = /*#__PURE__*/JSBI.BigInt(1000); // exports for internal consumption
 
 var ZERO = /*#__PURE__*/JSBI.BigInt(0);
@@ -766,19 +767,23 @@ var Price = /*#__PURE__*/function (_Fraction) {
 
 var PAIR_ADDRESS_CACHE = {};
 
-var composeKey = function composeKey(token0, token1) {
-  return token0.chainId + "-" + token0.address + "-" + token1.address + "-" + FACTORY_ADDRESS_MAP[token1.chainId];
+var composeKey = function composeKey(token0, token1, factory) {
+  return token0.chainId + "-" + token0.address + "-" + token1.address + "-" + factory;
 };
 
 var Pair = /*#__PURE__*/function () {
-  function Pair(tokenAmountA, tokenAmountB) {
+  function Pair(tokenAmountA, tokenAmountB, router) {
+    if (router === void 0) {
+      router = ROUTER_ADDRESS;
+    }
+
     var tokenAmounts = tokenAmountA.token.sortsBefore(tokenAmountB.token) // does safety checks
     ? [tokenAmountA, tokenAmountB] : [tokenAmountB, tokenAmountA];
-    this.liquidityToken = new Token(tokenAmounts[0].token.chainId, Pair.getAddress(tokenAmounts[0].token, tokenAmounts[1].token), 18, 'Cake-LP', 'Pancake LPs');
+    this.liquidityToken = new Token(tokenAmounts[0].token.chainId, Pair.getAddress(tokenAmounts[0].token, tokenAmounts[1].token, router), 18, 'Cake-LP', 'Pancake LPs');
     this.tokenAmounts = tokenAmounts;
   }
 
-  Pair.getAddress = function getAddress(tokenA, tokenB) {
+  Pair.getAddress = function getAddress(tokenA, tokenB, router) {
     var _PAIR_ADDRESS_CACHE;
 
     var _ref = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA],
@@ -786,12 +791,14 @@ var Pair = /*#__PURE__*/function () {
         token1 = _ref[1]; // does safety checks
 
 
-    var key = composeKey(token0, token1);
+    var factory = FACTORY_ADDRESS_MAP[token0.chainId][router];
+    var initCode = INIT_CODE_HASH_MAP[token0.chainId][router];
+    var key = composeKey(token0, token1, factory);
 
     if (((_PAIR_ADDRESS_CACHE = PAIR_ADDRESS_CACHE) === null || _PAIR_ADDRESS_CACHE === void 0 ? void 0 : _PAIR_ADDRESS_CACHE[key]) === undefined) {
       var _extends2;
 
-      PAIR_ADDRESS_CACHE = _extends({}, PAIR_ADDRESS_CACHE, (_extends2 = {}, _extends2[key] = getCreate2Address(FACTORY_ADDRESS_MAP[token0.chainId], keccak256(['bytes'], [pack(['address', 'address'], [token0.address, token1.address])]), INIT_CODE_HASH_MAP[token0.chainId]), _extends2));
+      PAIR_ADDRESS_CACHE = _extends({}, PAIR_ADDRESS_CACHE, (_extends2 = {}, _extends2[key] = getCreate2Address(factory, keccak256(['bytes'], [pack(['address', 'address'], [token0.address, token1.address])]), initCode), _extends2));
     }
 
     return PAIR_ADDRESS_CACHE[key];
@@ -2296,11 +2303,15 @@ var Fetcher = /*#__PURE__*/function () {
    */
   ;
 
-  Fetcher.fetchPairData = function fetchPairData(tokenA, tokenB, provider) {
+  Fetcher.fetchPairData = function fetchPairData(tokenA, tokenB, provider, router) {
+    if (router === void 0) {
+      router = ROUTER_ADDRESS;
+    }
+
     try {
       if (provider === undefined) provider = getDefaultProvider(getNetwork(tokenA.chainId));
       !(tokenA.chainId === tokenB.chainId) ? process.env.NODE_ENV !== "production" ? invariant(false, 'CHAIN_ID') : invariant(false) : void 0;
-      var address = Pair.getAddress(tokenA, tokenB);
+      var address = Pair.getAddress(tokenA, tokenB, router);
       return Promise.resolve(new Contract(address, IPancakePair, provider).getReserves()).then(function (_ref) {
         var reserves0 = _ref[0],
             reserves1 = _ref[1];

@@ -2305,7 +2305,7 @@ var Fetcher = /*#__PURE__*/function () {
 
   Fetcher.fetchPairData = function fetchPairData(tokenA, tokenB, provider, router) {
     if (router === void 0) {
-      router = ROUTER_ADDRESS;
+      router = {};
     }
 
     try {
@@ -2316,7 +2316,7 @@ var Fetcher = /*#__PURE__*/function () {
         var reserves0 = _ref[0],
             reserves1 = _ref[1];
         var balances = tokenA.sortsBefore(tokenB) ? [reserves0, reserves1] : [reserves1, reserves0];
-        return new Pair(new TokenAmount(tokenA, balances[0]), new TokenAmount(tokenB, balances[1]));
+        return new Pair(new TokenAmount(tokenA, balances[0]), new TokenAmount(tokenB, balances[1]), router);
       });
     } catch (e) {
       return Promise.reject(e);

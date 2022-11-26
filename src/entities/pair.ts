@@ -15,8 +15,7 @@ import {
   FIVE,
   FEES_NUMERATOR,
   FEES_DENOMINATOR,
-  ChainId,
-  ROUTER_ADDRESS
+  ChainId
 } from '../constants'
 import { sqrt, parseBigintIsh } from '../utils'
 import { InsufficientReservesError, InsufficientInputAmountError } from '../errors'
@@ -29,7 +28,7 @@ const composeKey = (token0: Token, token1: Token, factory: string) => `${token0.
 export class Pair {
   public readonly liquidityToken: Token
   private readonly tokenAmounts: [TokenAmount, TokenAmount]
-  public ROUTER;
+  public ROUTER: any;
   public static getAddress(tokenA: Token, tokenB: Token, router: string): string {
     const [token0, token1] = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
 
@@ -52,7 +51,7 @@ export class Pair {
     return PAIR_ADDRESS_CACHE[key]
   }
 
-  public constructor(tokenAmountA: TokenAmount, tokenAmountB: TokenAmount, router) {
+  public constructor(tokenAmountA: TokenAmount, tokenAmountB: TokenAmount, router: any) {
     this.ROUTER = router;
     const tokenAmounts = tokenAmountA.token.sortsBefore(tokenAmountB.token) // does safety checks
       ? [tokenAmountA, tokenAmountB]

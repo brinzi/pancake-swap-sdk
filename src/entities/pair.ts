@@ -29,7 +29,7 @@ const composeKey = (token0: Token, token1: Token, factory: string) => `${token0.
 export class Pair {
   public readonly liquidityToken: Token
   private readonly tokenAmounts: [TokenAmount, TokenAmount]
-
+  public ROUTER;
   public static getAddress(tokenA: Token, tokenB: Token, router: string): string {
     const [token0, token1] = tokenA.sortsBefore(tokenB) ? [tokenA, tokenB] : [tokenB, tokenA] // does safety checks
 
@@ -42,9 +42,9 @@ export class Pair {
       PAIR_ADDRESS_CACHE = {
         ...PAIR_ADDRESS_CACHE,
         [key]: getCreate2Address(
-        factory,
-        keccak256(['bytes'], [pack(['address', 'address'], [token0.address, token1.address])]),
-        initCode
+          factory,
+          keccak256(['bytes'], [pack(['address', 'address'], [token0.address, token1.address])]),
+          initCode
         )
       }
     }
@@ -52,7 +52,8 @@ export class Pair {
     return PAIR_ADDRESS_CACHE[key]
   }
 
-  public constructor(tokenAmountA: TokenAmount, tokenAmountB: TokenAmount, router = ROUTER_ADDRESS) {
+  public constructor(tokenAmountA: TokenAmount, tokenAmountB: TokenAmount, router) {
+    this.ROUTER = router;
     const tokenAmounts = tokenAmountA.token.sortsBefore(tokenAmountB.token) // does safety checks
       ? [tokenAmountA, tokenAmountB]
       : [tokenAmountB, tokenAmountA]
@@ -142,7 +143,7 @@ export class Pair {
     if (JSBI.equal(outputAmount.raw, ZERO)) {
       throw new InsufficientInputAmountError()
     }
-    return [outputAmount, new Pair(inputReserve.add(inputAmount), outputReserve.subtract(outputAmount))]
+    return [outputAmount, new Pair(inputReserve.add(inputAmount), outputReserve.subtract(outputAmount), this.ROUTER)]
   }
 
   public getInputAmount(outputAmount: TokenAmount): [TokenAmount, Pair] {
@@ -163,7 +164,7 @@ export class Pair {
       outputAmount.token.equals(this.token0) ? this.token1 : this.token0,
       JSBI.add(JSBI.divide(numerator, denominator), ONE)
     )
-    return [inputAmount, new Pair(inputReserve.add(inputAmount), outputReserve.subtract(outputAmount))]
+    return [inputAmount, new Pair(inputReserve.add(inputAmount), outputReserve.subtract(outputAmount), this.ROUTER)]
   }
 
   public getLiquidityMinted(
